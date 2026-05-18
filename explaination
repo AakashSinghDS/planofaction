@@ -1,0 +1,811 @@
+const {
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  Header, Footer, AlignmentType, LevelFormat, HeadingLevel,
+  BorderStyle, WidthType, ShadingType, VerticalAlign, PageBreak
+} = require("/home/claude/.npm-global/lib/node_modules/docx");
+const fs = require("fs");
+
+// ── Palette ─────────────────────────────────────────────────────────────────
+const TEAL   = "00C9A7";
+const NAVY   = "0D1B2A";
+const CORAL  = "FF6B6B";
+const GOLD   = "C9A227";
+const WHITE  = "FFFFFF";
+const BLACK  = "1E3448";
+const DGRAY  = "8FA3B1";
+const LGRAY  = "F4F8FB";
+const MGRAY  = "E8EDF2";
+const SCRIPT = "1A3A2A"; // dark green for speaker notes
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const b  = (color = "CCCCCC") => ({ style: BorderStyle.SINGLE, size: 1, color });
+const bs = (c = "CCCCCC")     => ({ top: b(c), bottom: b(c), left: b(c), right: b(c) });
+const nb = ()                  => ({ style: BorderStyle.NONE, size: 0, color: "FFFFFF" });
+const nbs = ()                 => ({ top: nb(), bottom: nb(), left: nb(), right: nb() });
+const cm  = { top: 100, bottom: 100, left: 140, right: 140 };
+const cmw = { top: 140, bottom: 140, left: 200, right: 200 };
+
+function sp(n = 120) {
+  return new Paragraph({ spacing: { before: n, after: 0 }, children: [new TextRun("")] });
+}
+
+function hr(color = TEAL, size = 6) {
+  return new Paragraph({
+    spacing: { before: 180, after: 180 },
+    border: { bottom: { style: BorderStyle.SINGLE, size, color, space: 1 } },
+    children: [new TextRun("")]
+  });
+}
+
+function h1(text) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { before: 400, after: 160 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: TEAL, space: 8 } },
+    children: [new TextRun({ text, font: "Arial", size: 38, bold: true, color: NAVY })]
+  });
+}
+
+function h2(text, color = NAVY) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 320, after: 100 },
+    children: [new TextRun({ text, font: "Arial", size: 28, bold: true, color })]
+  });
+}
+
+function h3(text, color = BLACK) {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_3,
+    spacing: { before: 220, after: 80 },
+    children: [new TextRun({ text, font: "Arial", size: 23, bold: true, color })]
+  });
+}
+
+function p(text, opts = {}) {
+  const { bold = false, italic = false, color = BLACK, size = 22,
+          before = 60, after = 80, align = AlignmentType.LEFT } = opts;
+  return new Paragraph({
+    alignment: align,
+    spacing: { before, after },
+    children: [new TextRun({ text, font: "Arial", size, bold, italic, color })]
+  });
+}
+
+function rp(runs, opts = {}) {
+  const { before = 60, after = 80, align = AlignmentType.LEFT } = opts;
+  return new Paragraph({
+    alignment: align,
+    spacing: { before, after },
+    children: runs.map(r => new TextRun({ font: "Arial", size: 22, color: BLACK, ...r }))
+  });
+}
+
+function bullet(text, level = 0, color = BLACK, bold = false) {
+  return new Paragraph({
+    numbering: { reference: "bullets", level },
+    spacing: { before: 50, after: 50 },
+    children: [new TextRun({ text, font: "Arial", size: 22, color, bold })]
+  });
+}
+
+// Box helpers
+function box(children, fillColor, leftColor, leftSize = 18) {
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [9360],
+    rows: [new TableRow({ children: [new TableCell({
+      borders: {
+        top: b(leftColor),
+        bottom: b("DDDDDD"),
+        left: { style: BorderStyle.SINGLE, size: leftSize, color: leftColor },
+        right: b("DDDDDD")
+      },
+      shading: { fill: fillColor, type: ShadingType.CLEAR },
+      margins: cmw,
+      width: { size: 9360, type: WidthType.DXA },
+      children
+    })] })]
+  });
+}
+
+// Script block — distinct visual style for spoken words
+function scriptBox(label, lines) {
+  const labelPara = new Paragraph({
+    spacing: { before: 0, after: 80 },
+    children: [new TextRun({ text: label, font: "Arial", size: 19, bold: true, color: TEAL, characterSpacing: 100 })]
+  });
+  const contentParas = lines.map(line => {
+    const isStage = line.startsWith("[") && line.endsWith("]");
+    return new Paragraph({
+      spacing: { before: 0, after: 60 },
+      children: [new TextRun({
+        text: line,
+        font: "Arial",
+        size: isStage ? 19 : 22,
+        italic: isStage,
+        color: isStage ? DGRAY : SCRIPT,
+      })]
+    });
+  });
+  return box([labelPara, ...contentParas], "EDF7F4", TEAL, 24);
+}
+
+// Q&A block
+function qaBox(question, answer, tips = []) {
+  const children = [
+    new Paragraph({
+      spacing: { before: 0, after: 80 },
+      children: [new TextRun({ text: "❓  " + question, font: "Arial", size: 22, bold: true, color: NAVY })]
+    }),
+    new Paragraph({
+      spacing: { before: 0, after: tips.length ? 80 : 0 },
+      children: [new TextRun({ text: answer, font: "Arial", size: 22, color: SCRIPT })]
+    }),
+    ...tips.map(t => new Paragraph({
+      numbering: { reference: "bullets", level: 0 },
+      spacing: { before: 40, after: 40 },
+      children: [new TextRun({ text: t, font: "Arial", size: 21, color: SCRIPT })]
+    }))
+  ];
+  return box(children, "F0FBF8", TEAL, 18);
+}
+
+function sectionDivider(num, title, subtitle) {
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [9360],
+    rows: [new TableRow({ children: [new TableCell({
+      borders: nbs(),
+      shading: { fill: NAVY, type: ShadingType.CLEAR },
+      margins: { top: 200, bottom: 200, left: 280, right: 280 },
+      width: { size: 9360, type: WidthType.DXA },
+      children: [
+        new Paragraph({
+          spacing: { before: 0, after: 80 },
+          children: [
+            new TextRun({ text: num + "  ", font: "Arial", size: 48, bold: true, color: TEAL }),
+            new TextRun({ text: title.toUpperCase(), font: "Arial", size: 26, bold: true, color: WHITE, characterSpacing: 80 })
+          ]
+        }),
+        subtitle ? new Paragraph({
+          spacing: { before: 0, after: 0 },
+          children: [new TextRun({ text: subtitle, font: "Arial", size: 20, italic: true, color: DGRAY })]
+        }) : null
+      ].filter(Boolean)
+    })] })]
+  });
+}
+
+function infoRow(cols) {
+  // cols: [{text, color, fill, w}]
+  const totalW = cols.reduce((a, c) => a + c.w, 0);
+  return new Table({
+    width: { size: totalW, type: WidthType.DXA },
+    columnWidths: cols.map(c => c.w),
+    rows: [new TableRow({ children: cols.map(c => new TableCell({
+      borders: nbs(),
+      shading: { fill: c.fill || LGRAY, type: ShadingType.CLEAR },
+      margins: cmw,
+      width: { size: c.w, type: WidthType.DXA },
+      children: [new Paragraph({
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({ text: c.text, font: "Arial", size: 21, bold: c.bold || false, color: c.color || BLACK })]
+      })]
+    })) })]
+  });
+}
+
+// ── Document ─────────────────────────────────────────────────────────────────
+const doc = new Document({
+  styles: {
+    default: { document: { run: { font: "Arial", size: 22, color: BLACK } } },
+    paragraphStyles: [
+      { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 38, bold: true, font: "Arial", color: NAVY },
+        paragraph: { spacing: { before: 400, after: 160 }, outlineLevel: 0 } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 28, bold: true, font: "Arial", color: NAVY },
+        paragraph: { spacing: { before: 320, after: 100 }, outlineLevel: 1 } },
+      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 23, bold: true, font: "Arial", color: BLACK },
+        paragraph: { spacing: { before: 220, after: 80 }, outlineLevel: 2 } },
+    ]
+  },
+  numbering: {
+    config: [
+      { reference: "bullets",
+        levels: [
+          { level: 0, format: LevelFormat.BULLET, text: "\u2022", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+          { level: 1, format: LevelFormat.BULLET, text: "\u25E6", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 1080, hanging: 360 } } } },
+        ]
+      },
+      { reference: "numbers",
+        levels: [
+          { level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+        ]
+      }
+    ]
+  },
+  sections: [{
+    properties: {
+      page: {
+        size: { width: 12240, height: 15840 },
+        margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 }
+      }
+    },
+    headers: {
+      default: new Header({ children: [
+        new Table({
+          width: { size: 10080, type: WidthType.DXA },
+          columnWidths: [5040, 5040],
+          rows: [new TableRow({ children: [
+            new TableCell({
+              borders: nbs(),
+              shading: { fill: NAVY, type: ShadingType.CLEAR },
+              margins: { top: 80, bottom: 80, left: 160, right: 160 },
+              width: { size: 5040, type: WidthType.DXA },
+              children: [new Paragraph({ children: [new TextRun({ text: "DaMembrane — SEO & Digital Growth Pitch", font: "Arial", size: 18, bold: true, color: WHITE })] })]
+            }),
+            new TableCell({
+              borders: nbs(),
+              shading: { fill: NAVY, type: ShadingType.CLEAR },
+              margins: { top: 80, bottom: 80, left: 160, right: 160 },
+              width: { size: 5040, type: WidthType.DXA },
+              children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Digital Marketing Manager  |  Confidential", font: "Arial", size: 18, color: DGRAY })] })]
+            })
+          ]})]
+        })
+      ]})
+    },
+    children: [
+
+      // ══════════════════════════════════════════════════════════════
+      // COVER
+      // ══════════════════════════════════════════════════════════════
+      sp(600),
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [9360],
+        rows: [new TableRow({ children: [new TableCell({
+          borders: { top: nb(), bottom: nb(), left: { style: BorderStyle.SINGLE, size: 48, color: TEAL }, right: nb() },
+          shading: { fill: NAVY, type: ShadingType.CLEAR },
+          margins: { top: 480, bottom: 480, left: 440, right: 440 },
+          width: { size: 9360, type: WidthType.DXA },
+          children: [
+            new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "DAMEMBRANE  ·  DIGITAL MARKETING", font: "Arial", size: 18, bold: true, color: TEAL, characterSpacing: 150 })] }),
+            new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "SEO & Organic Growth", font: "Arial", size: 56, bold: true, color: WHITE })] }),
+            new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: "The Plan, The Pitch & The Script", font: "Arial", size: 56, bold: true, color: TEAL })] }),
+            new Paragraph({ spacing: { before: 0, after: 80 }, children: [new TextRun({ text: "A complete document with two parts:", font: "Arial", size: 22, italic: true, color: DGRAY })] }),
+            new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "Part 1  —  Written Pitch  (hand this over, email it, or read from it)", font: "Arial", size: 22, color: DGRAY })] }),
+            new Paragraph({ spacing: { before: 0, after: 300 }, children: [new TextRun({ text: "Part 2  —  Verbal Script  (your word-for-word guide for the founder meeting)", font: "Arial", size: 22, color: DGRAY })] }),
+            new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "Prepared by: Digital Marketing Manager", font: "Arial", size: 20, color: DGRAY })] }),
+          ]
+        })] })]
+      }),
+      sp(200),
+      new Paragraph({ children: [new PageBreak()] }),
+
+
+      // ══════════════════════════════════════════════════════════════
+      // PART 1 — WRITTEN PITCH
+      // ══════════════════════════════════════════════════════════════
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [9360],
+        rows: [new TableRow({ children: [new TableCell({
+          borders: nbs(),
+          shading: { fill: TEAL, type: ShadingType.CLEAR },
+          margins: { top: 140, bottom: 140, left: 240, right: 240 },
+          width: { size: 9360, type: WidthType.DXA },
+          children: [
+            new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "PART 1  —  WRITTEN PITCH", font: "Arial", size: 22, bold: true, color: NAVY, characterSpacing: 120 })] })
+          ]
+        })] })]
+      }),
+      sp(60),
+      p("This is the leave-behind — a concise written summary of the growth plan you can hand to the founder, send as a follow-up email, or share before the meeting. Clear, direct, no fluff.", { italic: true, color: DGRAY }),
+      hr(),
+
+      h1("DaMembrane — SEO & Digital Growth Plan"),
+      rp([
+        { text: "To: ", bold: true },
+        { text: "Founder / CEO, DaMembrane" }
+      ], { before: 40, after: 40 }),
+      rp([
+        { text: "From: ", bold: true },
+        { text: "Digital Marketing Manager" }
+      ], { before: 0, after: 40 }),
+      rp([
+        { text: "Re: ", bold: true },
+        { text: "Phase 1 Organic Growth Strategy — Shopify Launch, Content Migration & Traffic" }
+      ], { before: 0, after: 40 }),
+      sp(60),
+
+      // ── Section 1: The Situation ──────────────────────────────────
+      sectionDivider("01", "Where We Are", "An honest look at our current position"),
+      sp(80),
+
+      p("We're launching on Shopify this week. The brand is strong, the products are in R&D, and the 'results not hype' positioning is exactly what the market is hungry for right now. What we need to build — and build fast — is organic visibility."),
+      sp(60),
+      p("Here's what we're working with right now:"),
+      sp(40),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [3200, 6160],
+        rows: [
+          ...[
+            ["Website", "Shopify launching this week. 9 blogs already on the dev site."],
+            ["Existing content", "80–85 blogs on the live Laravel site. Ready to migrate."],
+            ["Writer drafts", "30–40 blogs written, covering skincare, haircare and bodycare."],
+            ["New content output", "Writer can produce 15+ new blogs every month going forward."],
+            ["SEO baseline", "Starting from zero on Shopify — no rankings, no backlinks yet."],
+            ["Budget", "Lean — focused on R&D. Our growth channel is organic, not paid."],
+          ].map(([label, val], ri) => new TableRow({ children: [
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 3200, type: WidthType.DXA },
+              children: [new Paragraph({ children: [new TextRun({ text: label, font: "Arial", size: 21, bold: true, color: NAVY })] })] }),
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 6160, type: WidthType.DXA },
+              children: [new Paragraph({ children: [new TextRun({ text: val, font: "Arial", size: 21, color: BLACK })] })] }),
+          ]}))
+        ]
+      }),
+      sp(120),
+
+      box([
+        new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "The opportunity", font: "Arial", size: 22, bold: true, color: TEAL })] }),
+        new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "With 80–85 existing blogs + 30–40 ready drafts + 15+ new blogs per month, we can have 130+ indexed pages on Google within 60 days of launch. Most D2C skincare brands spend 6–12 months getting to this volume. We're starting there. BeMinimalist built a ₹100Cr+ business on almost zero paid advertising — purely through ingredient education and SEO. That's exactly the playbook we're running.", font: "Arial", size: 22, color: BLACK })] })
+      ], "E8FFF9", TEAL),
+      sp(80),
+
+      // ── Section 2: The Competitive Gap ───────────────────────────
+      sectionDivider("02", "The Competitive Gap", "Where our competitors are weak — and where we move first"),
+      sp(80),
+
+      p("We're entering a space with strong incumbents — BeMinimalist, Pilgrim, Dot & Key, The Derma Co., Foxtale. All five are ranking on Google. But each of them has exploitable gaps:"),
+      sp(60),
+
+      bullet("Dot & Key and Pilgrim have poor organic SEO — they rely on paid media and influencers. Their informational keyword coverage is thin."),
+      bullet("BeMinimalist has strong content but almost no YouTube SEO presence. Their video content is not optimized."),
+      bullet("None of them are effectively targeting long-tail product comparison queries — 'best SPF 50 vs SPF 30 India', 'niacinamide vs vitamin C for dark spots', 'face wash vs cleanser difference' — these are high-intent and largely uncontested."),
+      bullet("Foxtale is early-stage and building — we can outpublish them before they establish authority."),
+      sp(80),
+
+      p("Our positioning — 'don't hype, go for results' — is a direct counter-narrative to the overclaiming that dominates this space. That angle works exceptionally well in Google searches, where users are already skeptical and actively looking for honest, science-backed answers."),
+      sp(80),
+
+      // ── Section 3: The Strategy ───────────────────────────────────
+      sectionDivider("03", "What We're Doing", "The four-part growth engine"),
+      sp(80),
+
+      h2("1. Technical SEO — Getting the Foundation Right"),
+      p("From day one of the Shopify launch, we set up the technical infrastructure that makes everything else work:"),
+      bullet("Google Search Console + Analytics 4 connected on launch day"),
+      bullet("XML sitemap submitted, canonical URLs set, robots.txt configured"),
+      bullet("301 redirects from every old Laravel blog URL to its new Shopify URL — so we don't lose any SEO authority built on the old site"),
+      bullet("Schema markup on all product and blog pages — Product, FAQ, Article, BreadcrumbList"),
+      bullet("Core Web Vitals optimised: target LCP under 2.5s, mobile PageSpeed above 85"),
+      sp(60),
+
+      h2("2. Content Migration + Audit — 80–85 Blogs, Done Right"),
+      p("Every blog from the live site gets triaged into one of four categories before migrating:"),
+      sp(40),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [1800, 4760, 2800],
+        rows: [
+          new TableRow({ children: [
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 1800, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "Category", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 4760, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "What it means", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 2800, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "Action", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+          ]}),
+          ...[
+            ["Publish as-is",   "Well-written, 800+ words, solid structure",                        "Add SEO meta + 2 internal links → publish"],
+            ["Optimize",        "Good topic, weak SEO — thin meta, no keyword focus",               "Fix H1, meta, keyword usage → publish"],
+            ["Rewrite",         "Topic is right but content is thin or poor quality",               "Full rewrite with content brief → writer"],
+            ["Hold / Merge",    "Duplicate topic or under 300 words",                               "Merge into a stronger post or discard"],
+          ].map(([cat, desc, act], ri) => new TableRow({ children: [
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 1800, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: cat, font: "Arial", size: 20, bold: true, color: NAVY })] })] }),
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 4760, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: desc, font: "Arial", size: 20, color: BLACK })] })] }),
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 2800, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: act, font: "Arial", size: 20, color: BLACK })] })] }),
+          ]}))
+        ]
+      }),
+      sp(80),
+
+      p("The haircare and bodycare blogs that aren't related to our 9 launch products — those go live too. Every one of them gets internal links bridging users toward our skincare content and product pages. And when we launch haircare and bodycare products, those blogs are already indexed and driving traffic. We flip the links and they convert immediately."),
+      sp(80),
+
+      h2("3. Content Engine — 15+ Blogs Per Month, Structured for SEO"),
+      p("We run a pillar + cluster content model. Each of our core products has a pillar page — a comprehensive guide that ranks for high-volume head terms. Around it, we publish cluster blogs targeting long-tail keywords, all linking back to the pillar. This is how Google understands we're an authority on a topic, not just a brand with a blog."),
+      sp(60),
+      p("Monthly allocation from our 15+ blogs:"),
+      bullet("4–5 product-support blogs — directly drive traffic to product pages"),
+      bullet("4–5 skincare education blogs — build topical authority, high-volume informational queries"),
+      bullet("2–3 ingredient deep-dives — establish expert credibility, low-competition queries"),
+      bullet("2 comparison articles — capture mid-funnel users actively researching"),
+      bullet("2–3 haircare / bodycare blogs — from writer's existing drafts, published with skincare bridges"),
+      sp(60),
+      p("Every single blog starts with a written content brief — target keyword, search intent, H2 structure, internal links required, and word count. No draft goes to publish without one. This ensures we're always writing for Google and for users at the same time."),
+      sp(80),
+
+      h2("4. Social Media — Education First, English Throughout"),
+      p("All content across Instagram, YouTube, Facebook, LinkedIn, and Twitter/X is in English. Our audience is broad — skincare enthusiasts from 18 to 40+, across metro and tier-2 cities. The tone is consistent: knowledgeable but approachable. We don't talk down to users, and we don't use marketing language. We educate."),
+      sp(60),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [1600, 2400, 5360],
+        rows: [
+          new TableRow({ children: [
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 1600, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "Platform", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 2400, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "Primary Goal", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+            new TableCell({ borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm, width: { size: 5360, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: "What we're publishing", font: "Arial", size: 20, bold: true, color: TEAL })] })] }),
+          ]}),
+          ...[
+            ["Instagram 📸",  "Awareness + community",      "Daily posts: educational carousels, ingredient Reels, skin concern polls, UGC reposts"],
+            ["YouTube ▶️",    "SEO + long-form authority",  "1 video/week: routine walkthroughs, ingredient science, honest product deep-dives"],
+            ["Facebook 👥",   "Community + blog traffic",   "4×/week: blog shares, 'DaMembrane Skin Club' group, Facebook Lives, R&D content"],
+            ["LinkedIn 💼",   "Brand credibility + PR",     "3×/week: founder's journey, industry insights, R&D transparency, press coverage"],
+            ["Twitter / X 🐦", "Niche conversations",       "5–7 tweets/day: myth-busting threads, ingredient of the week, trending skincare topics"],
+          ].map(([p1, p2, p3], ri) => new TableRow({ children: [
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 1600, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: p1, font: "Arial", size: 20, bold: true, color: NAVY })] })] }),
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 2400, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: p2, font: "Arial", size: 20, color: BLACK })] })] }),
+            new TableCell({ borders: bs("DDDDDD"), shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR }, margins: cm, width: { size: 5360, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun({ text: p3, font: "Arial", size: 20, color: BLACK })] })] }),
+          ]}))
+        ]
+      }),
+      sp(80),
+
+      // ── Section 4: KPIs ───────────────────────────────────────────
+      sectionDivider("04", "What Success Looks Like", "Our targets — month by month"),
+      sp(80),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [3160, 1550, 1550, 1550, 1550],
+        rows: [
+          new TableRow({ children: [
+            ...["Metric", "Month 1", "Month 3", "Month 6", "Month 12"].map((h, i) => new TableCell({
+              borders: bs(NAVY), shading: { fill: NAVY, type: ShadingType.CLEAR }, margins: cm,
+              width: { size: [3160,1550,1550,1550,1550][i], type: WidthType.DXA },
+              children: [new Paragraph({ children: [new TextRun({ text: h, font: "Arial", size: 20, bold: true, color: i === 0 ? DGRAY : TEAL })] })]
+            }))
+          ]}),
+          ...[
+            ["Blogs live on Shopify",          "30–40",    "80–90",    "120+",     "150+"],
+            ["Organic sessions / month",        "500–1K",   "6–10K",    "25K+",     "60K+"],
+            ["Keywords ranking (any position)", "50+",      "300+",     "600+",     "1,200+"],
+            ["Keywords in Google Top 10",       "3–5",      "50–70",    "120+",     "300+"],
+            ["Domain Rating (Ahrefs)",          "0–5",      "15+",      "25+",      "40+"],
+            ["Backlinks earned",                "10",       "75+",      "200+",     "500+"],
+          ].map((row, ri) => new TableRow({ children: row.map((cell, ci) => new TableCell({
+            borders: bs("DDDDDD"),
+            shading: { fill: ri % 2 === 0 ? LGRAY : WHITE, type: ShadingType.CLEAR },
+            margins: cm,
+            width: { size: [3160,1550,1550,1550,1550][ci], type: WidthType.DXA },
+            children: [new Paragraph({ children: [new TextRun({ text: cell, font: "Arial", size: 20, bold: ci > 0, color: ci > 0 ? "006B54" : BLACK })] })]
+          })) }))
+        ]
+      }),
+      sp(80),
+
+      // ── Section 5: This Week ──────────────────────────────────────
+      sectionDivider("05", "What We're Doing This Week", "Immediate actions — starting now"),
+      sp(80),
+
+      p("We don't wait. These six things happen in the first 7 days:"),
+      sp(50),
+      bullet("Shopify goes live — Google Search Console and GA4 connected on the same day"),
+      bullet("Screaming Frog crawl of the live Laravel site — full URL export and content audit begins"),
+      bullet("301 redirect map created for all 80–85 migrating blog URLs"),
+      bullet("All 5 social media profiles set up with consistent bios, branding and first 10 posts planned"),
+      bullet("First 7 product-support blogs briefed, SEO-optimised and scheduled to publish"),
+      bullet("Keyword master list of 100+ target keywords — mapped to products, blogs, and search intent"),
+      sp(80),
+
+      box([
+        new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "The bottom line", font: "Arial", size: 22, bold: true, color: NAVY })] }),
+        new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "DaMembrane's brand promise is 'don't hype, go for results.' That's also the philosophy behind everything we're doing in SEO and digital. No shortcuts, no black-hat tricks, no inflated vanity metrics. We build content that answers real questions, earns real backlinks, and ranks because it deserves to rank. The compounding effect of this — 6 months in, 12 months in — is what gives us a sustainable competitive moat that paid advertising can never replicate.", font: "Arial", size: 22, color: BLACK })] })
+      ], LGRAY, NAVY, 24),
+      sp(120),
+
+      p("— Digital Marketing Manager, DaMembrane", { italic: true, color: DGRAY, align: AlignmentType.RIGHT }),
+      sp(60),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+
+      // ══════════════════════════════════════════════════════════════
+      // PART 2 — VERBAL SCRIPT
+      // ══════════════════════════════════════════════════════════════
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [9360],
+        rows: [new TableRow({ children: [new TableCell({
+          borders: nbs(),
+          shading: { fill: SCRIPT, type: ShadingType.CLEAR },
+          margins: { top: 140, bottom: 140, left: 240, right: 240 },
+          width: { size: 9360, type: WidthType.DXA },
+          children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "PART 2  —  VERBAL SCRIPT", font: "Arial", size: 22, bold: true, color: WHITE, characterSpacing: 120 })] })]
+        })] })]
+      }),
+      sp(60),
+      p("This is your word-for-word speaking guide. Green text is what you say. Stage directions in [brackets] tell you what to do. You don't need to memorise this — read it a few times and make it your own. The goal is to sound like you know exactly what you're doing. Because you do.", { italic: true, color: DGRAY }),
+      sp(60),
+      box([
+        new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "How to use this script", font: "Arial", size: 21, bold: true, color: GOLD })] }),
+        new Paragraph({ spacing: { before: 0, after: 40 }, children: [new TextRun({ text: "Read through it twice before your meeting. Mark the lines that feel most natural to you and adjust the ones that don't. Speak slower than feels comfortable — founders need time to absorb numbers. Pause after key points. Make eye contact during the opening and closing. Use the PPT as your visual backdrop — you're narrating it, not reading from it.", font: "Arial", size: 21, color: BLACK })] }),
+      ], LIGHT2 = "FFFBEB", GOLD, 20),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("OPENING — Before you open the PPT", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY THIS FIRST — no slides yet", [
+        "Before I walk you through the deck, I want to give you the one-line summary of what this plan is.",
+        "",
+        "We're launching on Shopify this week. We have 80-plus blogs sitting on the old site, another 30 to 40 drafts ready, and a writer who can produce 15 new blogs every month. Most brands spend the first 6 months trying to get to that content volume. We're already there.",
+        "",
+        "So the question isn't whether we have enough to work with. The question is how we structure, optimise and distribute it so Google ranks us and users find us — without spending money on ads.",
+        "",
+        "That's what this plan is. Let me take you through it.",
+        "",
+        "[Open the PPT. Go to Slide 1.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 2 — Where We Stand", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "This is our honest starting position. Three things are true right now.",
+        "",
+        "One — our website is brand new on Shopify. Zero domain authority, zero rankings. That's expected. Every brand starts here.",
+        "",
+        "Two — our content is actually in good shape. 80-plus existing blogs, 30 to 40 drafts, 15 new ones per month. That's a content engine most brands would kill for at launch.",
+        "",
+        "Three — none of that content has been SEO-optimised yet. No keyword targeting, no internal linking, no schema markup. So we have the raw material — we just need to structure it correctly.",
+        "",
+        "The goal this quarter is to fix that gap. Get the foundation right, get the content live and optimised, and start compounding.",
+        "",
+        "[Pause. Let that land before moving on.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 3 — Content Assets & Migration", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "Let me talk about the blog situation specifically, because I know there's a question about what to do with the content that isn't related to our 9 launch products — the haircare blogs, the shampoo content, things like that.",
+        "",
+        "My call: we publish all of it.",
+        "",
+        "Here's the logic. More content means Google crawls us more frequently. 130 pages on day one signals a serious brand, not a startup. And every off-topic blog — haircare, bodycare — gets internal links that bridge users toward our skincare content and product pages.",
+        "",
+        "More importantly: when we eventually launch haircare and bodycare products, which is the plan — that content is already indexed. Already ranking. We update the links and it converts immediately. That's months of SEO head-start we're not paying extra for.",
+        "",
+        "The blogs that come in from the old site go through a four-category audit. Publish as-is, optimise, rewrite, or hold. We work through that systematically.",
+        "",
+        "[Point to the migration categories on the slide.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 4 — Competitor Analysis", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "Now let's talk about the market we're entering.",
+        "",
+        "BeMinimalist, Pilgrim, Dot and Key, The Derma Co., Foxtale. All five are in the space. All five have content. And all five have meaningful gaps.",
+        "",
+        "Dot and Key run almost entirely on paid media and influencers. Their organic SEO is weak. Pilgrim is better, but still thin on informational content.",
+        "",
+        "BeMinimalist has the strongest content library — 500-plus blogs — but almost no YouTube SEO presence. Their videos aren't optimised.",
+        "",
+        "And across all five of them, long-tail comparison queries are almost untouched. 'SPF 30 vs SPF 50 which is better India'. 'Niacinamide vs vitamin C for dark spots'. 'Face wash vs cleanser what's the difference'. These are high-intent searches. People doing this search are ready to buy. And they're largely uncontested.",
+        "",
+        "That's our first-mover window. We move on it in Month 1.",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDES 5 & 6 — Keywords & Technical SEO", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "Our keyword strategy has three layers.",
+        "",
+        "Transactional — 'best SPF 50 sunscreen India', 'under eye gel for dark circles'. These go on product pages. The person searching this is looking to buy.",
+        "",
+        "Informational — 'how to use sunscreen correctly', 'what does PA++++ mean'. These go on blog posts. The person is researching. We give them the answer, we earn their trust, and we put our product in front of them at the end of the article.",
+        "",
+        "Comparison — 'SPF 30 vs 50 which is better', 'chemical vs physical sunscreen'. These are our highest-converting blog type. Someone doing this search is two steps away from a purchase. We capture them here.",
+        "",
+        "On the technical side — [move to slide 6] — from launch day, everything is set up correctly. GSC, GA4, sitemap, 301 redirects from the old site, schema markup, Core Web Vitals. This isn't optional infrastructure. It's the foundation everything else sits on.",
+        "",
+        "[Keep this slide brief — the founder doesn't need the technical detail, just the confidence that it's handled.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 7 — Content Engine", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "This is the model that makes the content work systematically, not just randomly.",
+        "",
+        "We use a pillar and cluster structure. Each of our core products gets a pillar page — a comprehensive, authoritative guide. Around it, we publish cluster blogs on more specific topics, and they all link back to the pillar.",
+        "",
+        "For example: the sunscreen pillar page is 'The Complete SPF 50 Sunscreen Guide for Indian Skin'. Around it, we publish — what does PA++++ mean, chemical versus physical sunscreen, best SPF for oily skin, how to reapply sunscreen correctly. Every one of those links back to the pillar, and the pillar links to the product page.",
+        "",
+        "Google sees the whole cluster and says — this brand understands sunscreen. They rank. We sell.",
+        "",
+        "At 15 blogs per month, we can run two to three pillar clusters simultaneously. Within 90 days we have comprehensive coverage for sunscreen, anti-aging, and cleansing — the three biggest search categories for our launch products.",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 8 — Social Media", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "Social is where we build the audience that eventually comes to the site.",
+        "",
+        "Everything is in English. Broad audience — 18 to 40 plus, metro and tier-2 cities, skincare beginners through enthusiasts.",
+        "",
+        "The tone is consistent across every platform: educated but approachable. We don't talk down to people. We don't use buzzwords. We explain things clearly, we back them up with the science, and we let the results speak.",
+        "",
+        "Instagram is our volume platform — daily educational carousels and Reels. YouTube is our SEO platform — one well-optimised video per week builds long-term search traffic. Facebook is our community platform — we're building the DaMembrane Skin Club as a group, not just a page.",
+        "",
+        "LinkedIn and Twitter support credibility and press outreach. They're lower volume but important for the brand's authority in the market.",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 9 — Link Building", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "Backlinks are how Google decides whether to trust us. Every link from a credible site to ours is a vote of confidence.",
+        "",
+        "We build links six ways — all zero additional budget.",
+        "",
+        "HARO — Help A Reporter Out. We sign up, we get daily emails from journalists who need expert skincare quotes. We respond. We get cited in Vogue India, Hindustan Times, Times of India. For free.",
+        "",
+        "Guest posts — we write expert articles for StyleCraze, Femina, Pinkvilla, SkinKraft Blog. They link back to us. Their domain authority flows to ours.",
+        "",
+        "Reddit and Quora — we answer questions on r/IndianSkincareAddicts and Quora. Genuine, helpful answers. Not spam. These communities are highly engaged and they trust recommendations from people who clearly know what they're talking about.",
+        "",
+        "Micro-influencer gifting — product gifting to 10K to 200K creators. No payment, just product. We ask for a YouTube review or an Instagram post with a link in bio. Ten times the ROI of paid influencer campaigns.",
+        "",
+        "[Move on without lingering — this slide is self-explanatory]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 10 — 90-Day Plan", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "This is the execution timeline. Four phases over 13 weeks.",
+        "",
+        "Weeks 1 and 2 — Foundation. Shopify goes live, GSC and GA4 are connected, the full content audit is done, 301 redirects are mapped, and the first 7 product-support blogs are live.",
+        "",
+        "Weeks 3 to 6 — Content engine is running. We're migrating the high-priority blogs, pillar pages are published, all 5 social profiles are active, and HARO outreach has started.",
+        "",
+        "Weeks 7 to 10 — Scale and distribute. All 80-plus old blogs are live on Shopify. 25-plus new blogs are published. First micro-influencer gifting campaign is out. We're starting to see impressions in Search Console.",
+        "",
+        "Weeks 11 to 13 — We review, optimise and report. We look at what's working, fix what isn't, and use that data to plan Month 4 onward.",
+        "",
+        "[Point to each phase as you name it. Keep the pace steady — don't rush this slide.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 11 — KPIs", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY", [
+        "These are the numbers I'll report against every month.",
+        "",
+        "Month 1 — we'll have 30 to 40 blogs live, 500 to 1,000 organic sessions, 50-plus keywords appearing in Google. This is the infrastructure month. The numbers will be modest.",
+        "",
+        "Month 3 — organic traffic hits 6,000 to 10,000 sessions. 300-plus keywords ranking. 50 to 70 in the top 10.",
+        "",
+        "Month 6 — 25,000-plus organic sessions per month. Domain Rating above 25. Over 200 backlinks. This is where the compounding effect becomes visible.",
+        "",
+        "I'll report on all of this monthly — traffic, rankings, backlinks, social growth, and most importantly, how much of that traffic is converting to product page visits.",
+        "",
+        "[Pause here. This is a good moment for the founder to ask questions about the numbers.]",
+      ]),
+      sp(80),
+
+      hr(SCRIPT),
+      h2("SLIDE 12 — Closing", SCRIPT),
+      sp(60),
+
+      scriptBox("🎙  SAY THIS LAST", [
+        "Before I close — six things are happening this week. Shopify goes live with GSC and GA4 connected on the same day. I'm crawling the old site and building the full redirect map. The content audit starts immediately. All five social profiles go up with consistent branding. The first 7 blogs are briefed, optimised and scheduled. And the keyword master list — 100-plus keywords mapped to our products and content plan — is done.",
+        "",
+        "I'll have a weekly update for you every Monday — what went live, what's ranking, what we're testing.",
+        "",
+        "[Close the laptop or step back from the screen.]",
+        "",
+        "DaMembrane's brand promise is 'don't hype, go for results.' That's exactly the SEO philosophy. No shortcuts. No paid tricks. Consistent, quality content that earns its rankings. The brands that built lasting organic traffic in this space — BeMinimalist, The Derma Co. — did it through education and patience. We're doing the same thing, but we're starting with a bigger content base and a clearer strategic map.",
+        "",
+        "Happy to go deeper on anything.",
+        "",
+        "[Stop talking. Let the founder respond first.]",
+      ]),
+      sp(80),
+
+      // ── Anticipated questions ──────────────────────────────────────
+      hr(SCRIPT),
+      h2("ANTICIPATED FOUNDER QUESTIONS — And How to Handle Them", SCRIPT),
+      sp(60),
+      p("These are the most likely questions a founder asks when reviewing a digital marketing plan. Read through these before your meeting.", { italic: true, color: DGRAY }),
+      sp(80),
+
+      qaBox(
+        "How long before we see results from SEO?",
+        "Honest answer: meaningful organic traffic starts showing at month 3. Significant traffic — 10,000-plus sessions per month — is a 6-month target. SEO compounds over time, which is both its weakness and its biggest strength. Every piece of content we publish today is still driving traffic 12 months from now, without any additional spend. That's something paid ads can't do.",
+        []
+      ),
+      sp(60),
+
+      qaBox(
+        "Why not just run Google or Meta ads instead?",
+        "Ads work while you're paying for them. The moment you stop, the traffic stops. For a brand in R&D phase with a lean budget, building an organic channel now means we have a traffic asset — not a traffic rental. BeMinimalist scaled to ₹100 crore-plus revenue with almost no paid advertising. That's the model. Ads can supplement later, once we know which keywords and content are converting best — we use our own organic data to make paid more efficient.",
+        []
+      ),
+      sp(60),
+
+      qaBox(
+        "We have blogs about haircare and shampoo — we don't even sell those products yet. Why publish them?",
+        "Three reasons. One — content volume signals brand seriousness to Google. Two — every haircare blog gets internal links pointing toward our skincare content and products, so users who land on them can find their way to what we actually sell. Three — when we launch haircare products, which is the plan, those blogs are already indexed and ranking. We update the links and the content starts converting immediately. We're not publishing and forgetting them — we're planting seeds for the next product launch.",
+        []
+      ),
+      sp(60),
+
+      qaBox(
+        "What's the plan if the blogs don't rank?",
+        "We diagnose before we give up. There are three reasons a blog doesn't rank — wrong keyword choice, thin content, or not enough backlinks pointing to it. We can fix all three. If a keyword is too competitive, we go long-tail. If the content is too thin, we expand it. If it needs authority, we build links to it. Search Console tells us exactly which pages are getting impressions but not clicks — those are the ones we prioritise for improvement. Nothing is set and forget.",
+        []
+      ),
+      sp(60),
+
+      qaBox(
+        "What does this cost?",
+        "The tools we're using in Phase 1 are either free or minimal cost — Google Search Console, GA4, Screaming Frog free tier, Ahrefs Webmaster Tools free version, Canva, CapCut. The main cost is team time — my time as digital marketing manager, and the content writer's existing capacity. No paid media budget required in this phase. If and when we add paid ads, it's a separate conversation once we have organic data to inform it.",
+        []
+      ),
+      sp(60),
+
+      qaBox(
+        "How will you report on this?",
+        "Monthly report, every month, covering: organic sessions vs previous month, top 10 blogs by traffic, keywords moved into the top 10, backlinks acquired, social media growth across platforms, and blog-to-product page conversion rate. I'll also send a weekly Monday update — shorter, just what went live and anything notable in Search Console. You'll always know exactly where we stand.",
+        []
+      ),
+      sp(80),
+
+      hr(TEAL),
+      p("End of document. Good luck — you're more prepared than you think.", { italic: true, color: DGRAY, align: AlignmentType.CENTER }),
+      sp(60),
+
+    ]
+  }]
+});
+
+Packer.toBuffer(doc).then(buf => {
+  fs.writeFileSync("/mnt/user-data/outputs/DaMembrane_Pitch_and_Script.docx", buf);
+  console.log("✅  Done.");
+});
