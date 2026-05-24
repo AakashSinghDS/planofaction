@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DaMembrane — Brightening Face Serum (Product Page Template)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0D2137;
+    --blue: #1A5276;
+    --teal: #148F77;
+    --light-teal: #E8F8F5;
+    --cream: #FAFAF8;
+    --warm: #F5F0E8;
+    --accent: #27AE60;
+    --warn: #E67E22;
+    --text: #1C2833;
+    --muted: #6B7280;
+    --border: #E5E7EB;
+    --white: #FFFFFF;
+    --tag-bg: #EBF5FB;
+    --tag-text: #1A5276;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); }
+
+  /* NAV */
+  nav {
+    background: var(--navy);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px; position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: white; letter-spacing: 0.05em; }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a { color: #A9CCE3; text-decoration: none; font-size: 0.875rem; font-weight: 400; transition: color 0.2s; }
+  .nav-links a:hover { color: white; }
+  .nav-cta { background: var(--teal); color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-size: 0.875rem; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; }
+
+  /* BREADCRUMB */
+  .breadcrumb { padding: 0.75rem 4rem; font-size: 0.75rem; color: var(--muted); border-bottom: 1px solid var(--border); background: white; }
+  .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .breadcrumb span { margin: 0 0.4rem; }
+
+  /* MAIN PRODUCT SECTION */
+  .product-main {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; max-width: 1200px; margin: 0 auto;
+    padding: 3rem 2rem 2rem;
+  }
+
+  /* IMAGE GALLERY */
+  .gallery { display: flex; gap: 1rem; }
+  .thumbs { display: flex; flex-direction: column; gap: 0.75rem; }
+  .thumb {
+    width: 72px; height: 72px; border-radius: 8px; border: 2px solid var(--border);
+    overflow: hidden; cursor: pointer; transition: border-color 0.2s;
+    background: var(--warm); display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+  }
+  .thumb.active { border-color: var(--teal); }
+  .main-image {
+    flex: 1; aspect-ratio: 1; border-radius: 16px; background: var(--warm);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .main-image-inner { font-size: 8rem; line-height: 1; }
+  .badge-new {
+    position: absolute; top: 1rem; left: 1rem;
+    background: var(--teal); color: white; font-size: 0.7rem; font-weight: 600;
+    padding: 0.25rem 0.6rem; border-radius: 20px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .badge-bestseller {
+    position: absolute; top: 1rem; right: 1rem;
+    background: var(--warn); color: white; font-size: 0.7rem; font-weight: 600;
+    padding: 0.25rem 0.6rem; border-radius: 20px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  /* PRODUCT INFO */
+  .product-info { display: flex; flex-direction: column; gap: 1.25rem; }
+  .brand-name { font-size: 0.75rem; font-weight: 600; color: var(--teal); letter-spacing: 0.1em; text-transform: uppercase; }
+  .product-name { font-family: 'DM Serif Display', serif; font-size: 2rem; line-height: 1.2; color: var(--navy); }
+  .product-tagline { font-size: 0.95rem; color: var(--muted); font-weight: 300; font-style: italic; }
+
+  .rating-row { display: flex; align-items: center; gap: 0.75rem; }
+  .stars { color: #F59E0B; font-size: 0.9rem; letter-spacing: 0.05em; }
+  .rating-count { font-size: 0.8rem; color: var(--muted); }
+  .verified { font-size: 0.75rem; color: var(--accent); font-weight: 500; }
+
+  /* INGREDIENT CALLOUT */
+  .ingredient-callout {
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+  }
+  .ing-tag {
+    background: var(--tag-bg); color: var(--tag-text);
+    padding: 0.3rem 0.75rem; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 500; border: 1px solid #AED6F1;
+  }
+
+  /* PRICE */
+  .price-section { display: flex; align-items: baseline; gap: 0.75rem; }
+  .price { font-size: 2rem; font-weight: 700; color: var(--navy); font-family: 'DM Serif Display', serif; }
+  .price-old { font-size: 1rem; text-decoration: line-through; color: var(--muted); }
+  .price-save { background: #FDEDEC; color: var(--warn); font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; }
+
+  /* SIZE SELECTOR */
+  .size-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .size-options { display: flex; gap: 0.75rem; margin-top: 0.4rem; }
+  .size-btn {
+    padding: 0.4rem 1rem; border: 2px solid var(--border); border-radius: 8px;
+    font-size: 0.85rem; cursor: pointer; background: white; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .size-btn.active { border-color: var(--teal); background: var(--light-teal); color: var(--teal); font-weight: 600; }
+
+  /* CTA */
+  .cta-row { display: flex; gap: 0.75rem; }
+  .btn-primary {
+    flex: 1; background: var(--navy); color: white;
+    border: none; padding: 1rem 1.5rem; border-radius: 10px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s; letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { background: var(--blue); }
+  .btn-secondary {
+    flex: 1; background: var(--light-teal); color: var(--teal);
+    border: 2px solid var(--teal); padding: 1rem 1.5rem; border-radius: 10px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: var(--teal); color: white; }
+
+  /* TRUST BADGES */
+  .trust-row { display: flex; gap: 1rem; justify-content: space-between; }
+  .trust-item { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+  .trust-icon { font-size: 1.3rem; }
+  .trust-text { font-size: 0.7rem; color: var(--muted); text-align: center; font-weight: 500; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); }
+
+  /* TABS */
+  .tabs-section { max-width: 1200px; margin: 0 auto; padding: 0 2rem 1rem; }
+  .tab-row { display: flex; border-bottom: 2px solid var(--border); gap: 0; }
+  .tab {
+    padding: 0.85rem 1.5rem; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: 600; }
+  .tab-content { padding: 2rem 0; display: none; }
+  .tab-content.active { display: block; }
+
+  /* BENEFITS GRID */
+  .benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .benefit-card {
+    background: white; border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;
+  }
+  .benefit-icon { font-size: 1.5rem; flex-shrink: 0; width: 2.5rem; height: 2.5rem; background: var(--light-teal); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .benefit-title { font-size: 0.95rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem; }
+  .benefit-desc { font-size: 0.825rem; color: var(--muted); line-height: 1.5; }
+
+  /* INGREDIENTS */
+  .ing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .ing-card {
+    background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;
+  }
+  .ing-pct { font-size: 1.5rem; font-family: 'DM Serif Display', serif; color: var(--teal); font-weight: 400; }
+  .ing-name { font-size: 0.9rem; font-weight: 600; color: var(--navy); margin: 0.25rem 0; }
+  .ing-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+  /* HOW TO USE */
+  .steps-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .step { display: flex; gap: 1rem; align-items: flex-start; }
+  .step-num { width: 2rem; height: 2rem; background: var(--teal); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+  .step-text strong { font-size: 0.9rem; color: var(--navy); display: block; margin-bottom: 0.15rem; }
+  .step-text span { font-size: 0.825rem; color: var(--muted); }
+
+  /* FREE OF */
+  .free-of-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .free-item {
+    background: white; border: 1px solid var(--accent); border-radius: 8px;
+    padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.85rem; font-weight: 500; color: var(--navy);
+  }
+  .free-check { color: var(--accent); font-weight: 700; }
+
+  /* FAQ */
+  .faq-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .faq-item { background: white; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .faq-q { padding: 1rem 1.25rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--navy); }
+  .faq-a { padding: 0 1.25rem 1rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+  /* SKIN TYPE ROW */
+  .skin-type-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .skin-chip { background: white; border: 1px solid var(--border); padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.8rem; color: var(--navy); display: flex; align-items: center; gap: 0.3rem; }
+  .skin-chip .tick { color: var(--accent); font-weight: 700; }
+
+  /* REVIEWS SECTION */
+  .reviews-section { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--navy); margin-bottom: 1.25rem; }
+  .reviews-summary { display: flex; gap: 3rem; align-items: center; background: white; border: 1px solid var(--border); border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
+  .big-rating { font-family: 'DM Serif Display', serif; font-size: 4rem; color: var(--navy); line-height: 1; }
+  .rating-bar-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: var(--muted); }
+  .bar-outer { width: 150px; height: 6px; background: var(--border); border-radius: 3px; }
+  .bar-inner { height: 6px; background: #F59E0B; border-radius: 3px; }
+  .reviews-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .review-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .review-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+  .reviewer { font-size: 0.875rem; font-weight: 600; color: var(--navy); }
+  .review-stars { color: #F59E0B; font-size: 0.8rem; }
+  .review-tag { font-size: 0.7rem; color: var(--teal); font-weight: 500; background: var(--light-teal); padding: 0.15rem 0.5rem; border-radius: 4px; }
+  .review-text { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+  .review-verified { font-size: 0.7rem; color: var(--accent); margin-top: 0.5rem; }
+
+  /* RELATED PRODUCTS */
+  .related-section { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .product-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .product-card-img { height: 160px; background: var(--warm); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+  .product-card-info { padding: 0.875rem; }
+  .product-card-name { font-size: 0.875rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem; }
+  .product-card-concern { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .product-card-price { font-size: 0.9rem; font-weight: 700; color: var(--teal); }
+
+  /* FOOTER */
+  footer { background: var(--navy); color: #A9CCE3; padding: 3rem 2rem 1.5rem; margin-top: 4rem; }
+  .footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 2rem; }
+  .footer-brand { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: white; margin-bottom: 0.75rem; }
+  .footer-tagline { font-size: 0.85rem; line-height: 1.6; }
+  .footer-col h4 { font-size: 0.75rem; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+  .footer-col a { display: block; font-size: 0.85rem; color: #A9CCE3; text-decoration: none; margin-bottom: 0.4rem; }
+  .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; text-align: center; font-size: 0.75rem; max-width: 1200px; margin: 0 auto; }
+
+  /* ANNOTATION */
+  .anno {
+    position: relative; border: 2px dashed #F59E0B; border-radius: 8px;
+  }
+  .anno::before {
+    content: attr(data-label);
+    position: absolute; top: -1.1rem; left: 0.5rem;
+    background: #F59E0B; color: white; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 3px; letter-spacing: 0.05em; text-transform: uppercase;
+    white-space: nowrap; z-index: 10;
+  }
+
+  /* ANNOTATION KEY */
+  .anno-key {
+    max-width: 1200px; margin: 1rem auto 0; padding: 0.75rem 2rem;
+    background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 8px;
+    font-size: 0.75rem; color: #78350F; display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+  }
+  .anno-key strong { color: #92400E; }
+</style>
+</head>
+<body>
+
+<!-- DESIGNER NOTE -->
+<div style="background:#154360; color:white; padding:0.6rem 2rem; font-size:0.75rem; text-align:center; letter-spacing:0.03em;">
+  🎨 <strong>DESIGNER REFERENCE — DaMembrane Product Page Template</strong> · Inspired by Deconstruct, BeMinimalist & Innovist · Dashed borders = section labels for designer reference
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">DaMembrane</div>
+  <div class="nav-links">
+    <a href="#">Skincare</a>
+    <a href="#">Haircare</a>
+    <a href="#">Ingredients</a>
+    <a href="#">Blog</a>
+    <a href="#">About</a>
+  </div>
+  <button class="nav-cta">🛒 Cart (0)</button>
+</nav>
+
+<!-- ANNOTATION KEY -->
+<div class="anno-key">
+  <strong>🔶 Section Labels:</strong>
+  <span>Each yellow dashed box is a content section the designer should implement.</span>
+  <span>Replace emoji placeholders with real product images/icons.</span>
+  <span>Text is demo content — replace with real product copy following the Content Guidelines doc.</span>
+</div>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="#">Home</a><span>/</span>
+  <a href="#">Skincare</a><span>/</span>
+  <a href="#">Serums</a><span>/</span>
+  Brightening Face Serum
+</div>
+
+<!-- MAIN PRODUCT -->
+<div class="product-main">
+
+  <!-- LEFT: IMAGE GALLERY -->
+  <div class="anno" data-label="Section: Product Image Gallery (replace emojis with real product photos)">
+    <div class="gallery">
+      <div class="thumbs">
+        <div class="thumb active">🌟</div>
+        <div class="thumb">🧴</div>
+        <div class="thumb">✨</div>
+        <div class="thumb">📋</div>
+      </div>
+      <div class="main-image">
+        <div class="badge-new">New</div>
+        <div class="badge-bestseller">Best Seller</div>
+        <div class="main-image-inner">🌟</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PRODUCT DETAILS -->
+  <div class="product-info">
+    <div>
+      <div class="brand-name">DaMembrane</div>
+      <h1 class="product-name anno" data-label="H1: Product Name + Key Ingredient">Brightening Face Serum<br><span style="font-size:1.3rem; color:var(--teal);">10% Vitamin C + 5% Niacinamide</span></h1>
+      <p class="product-tagline">Fade dark spots. Even out skin tone. Backed by science.</p>
+    </div>
+
+    <div class="rating-row anno" data-label="Reviews Summary">
+      <span class="stars">★★★★★</span>
+      <span class="rating-count">4.8 (2,341 reviews)</span>
+      <span class="verified">✓ Dermatologist Tested</span>
+    </div>
+
+    <div class="anno" data-label="Ingredient Tags — Hero Active Ingredients">
+      <div style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.4rem;">Key Actives</div>
+      <div class="ingredient-callout">
+        <span class="ing-tag">10% Vitamin C (Ascorbic Acid)</span>
+        <span class="ing-tag">5% Niacinamide</span>
+        <span class="ing-tag">Hyaluronic Acid</span>
+        <span class="ing-tag">Ferulic Acid</span>
+      </div>
+    </div>
+
+    <div class="anno" data-label="Pricing + Offer">
+      <div class="price-section">
+        <div class="price">₹649</div>
+        <div class="price-old">₹899</div>
+        <div class="price-save">27% OFF</div>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted); margin-top:0.3rem;">Inclusive of all taxes · Free shipping above ₹499</div>
+    </div>
+
+    <div class="anno" data-label="Size / Variant Selector">
+      <div class="size-label">Select Size</div>
+      <div class="size-options">
+        <button class="size-btn">15ml (Trial)</button>
+        <button class="size-btn active">30ml</button>
+        <button class="size-btn">50ml (Best Value)</button>
+      </div>
+    </div>
+
+    <div class="anno" data-label="Primary CTAs — Add to Cart + Buy Now">
+      <div class="cta-row">
+        <button class="btn-primary">Add to Cart</button>
+        <button class="btn-secondary">Buy Now</button>
+      </div>
+    </div>
+
+    <div class="anno" data-label="Trust Badges — Key Differentiators">
+      <div class="trust-row">
+        <div class="trust-item"><div class="trust-icon">🚚</div><div class="trust-text">Free Delivery<br>₹499+</div></div>
+        <div class="trust-item"><div class="trust-icon">↩️</div><div class="trust-text">7-Day<br>Returns</div></div>
+        <div class="trust-item"><div class="trust-icon">🧪</div><div class="trust-text">Derm<br>Tested</div></div>
+        <div class="trust-item"><div class="trust-icon">🐰</div><div class="trust-text">Cruelty<br>Free</div></div>
+        <div class="trust-item"><div class="trust-icon">🌿</div><div class="trust-text">Paraben<br>Free</div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="anno" data-label="Skin Type Suitability">
+      <div style="font-size:0.8rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Works for</div>
+      <div class="skin-type-row">
+        <div class="skin-chip"><span class="tick">✓</span> Oily Skin</div>
+        <div class="skin-chip"><span class="tick">✓</span> Dry Skin</div>
+        <div class="skin-chip"><span class="tick">✓</span> Combination</div>
+        <div class="skin-chip"><span class="tick">✓</span> Sensitive</div>
+        <div class="skin-chip"><span class="tick">✓</span> Acne-Prone</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-section">
+  <div class="anno" data-label="Tabbed Content Section — Inspired by Deconstruct's Layout">
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab(this, 'benefits')">Benefits</div>
+      <div class="tab" onclick="switchTab(this, 'ingredients')">Ingredients</div>
+      <div class="tab" onclick="switchTab(this, 'howtouse')">How to Use</div>
+      <div class="tab" onclick="switchTab(this, 'freeof')">Free Of</div>
+      <div class="tab" onclick="switchTab(this, 'faq')">FAQ</div>
+    </div>
+
+    <!-- BENEFITS -->
+    <div class="tab-content active" id="tab-benefits">
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon">✨</div>
+          <div>
+            <div class="benefit-title">Fades Dark Spots & Pigmentation</div>
+            <div class="benefit-desc">10% Vitamin C (Ascorbic Acid) inhibits melanin synthesis, visibly reducing dark spots, sun damage, and post-acne marks within 4–6 weeks.</div>
+          </div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🔬</div>
+          <div>
+            <div class="benefit-title">Minimizes Pore Appearance</div>
+            <div class="benefit-desc">5% Niacinamide regulates sebum production and tightens the appearance of enlarged pores, giving skin a smoother, more refined texture.</div>
+          </div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">💧</div>
+          <div>
+            <div class="benefit-title">Deep & Lasting Hydration</div>
+            <div class="benefit-desc">Multi-weight Hyaluronic Acid penetrates multiple skin layers to bind and retain moisture, keeping skin plump and hydrated for up to 72 hours.</div>
+          </div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🛡️</div>
+          <div>
+            <div class="benefit-title">Antioxidant Protection</div>
+            <div class="benefit-desc">Ferulic Acid stabilizes Vitamin C and amplifies its antioxidant activity, neutralizing free radicals from UV and pollution exposure.</div>
+          </div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🌟</div>
+          <div>
+            <div class="benefit-title">Brighter, More Even Skin Tone</div>
+            <div class="benefit-desc">The combined action of Vitamin C + Niacinamide works synergistically to give you a visible brightening effect and a more even complexion.</div>
+          </div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🧪</div>
+          <div>
+            <div class="benefit-title">Suitable for All Skin Types</div>
+            <div class="benefit-desc">Dermatologist-tested, non-comedogenic formula. Safe for daily use on oily, dry, combination, and sensitive skin types.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INGREDIENTS -->
+    <div class="tab-content" id="tab-ingredients">
+      <div class="ing-grid">
+        <div class="ing-card">
+          <div class="ing-pct">10%</div>
+          <div class="ing-name">Vitamin C (Ascorbic Acid)</div>
+          <div class="ing-desc">The gold standard brightening ingredient. Inhibits melanin production, reduces visible dark spots, and provides powerful antioxidant protection. Clinically proven to improve skin radiance in 4–6 weeks.</div>
+        </div>
+        <div class="ing-card">
+          <div class="ing-pct">5%</div>
+          <div class="ing-name">Niacinamide (Vitamin B3)</div>
+          <div class="ing-desc">One of the most studied skincare actives. Regulates sebum, minimizes pores, strengthens the skin barrier, and fades post-inflammatory hyperpigmentation. Works in harmony with Vitamin C.</div>
+        </div>
+        <div class="ing-card">
+          <div class="ing-pct">2%</div>
+          <div class="ing-name">Hyaluronic Acid (Multi-Weight)</div>
+          <div class="ing-desc">Two molecular weights work at different skin depths — larger molecules hydrate the surface, smaller ones penetrate deeper layers. Holds up to 1,000x its weight in water.</div>
+        </div>
+        <div class="ing-card">
+          <div class="ing-pct">0.5%</div>
+          <div class="ing-name">Ferulic Acid</div>
+          <div class="ing-desc">A plant-based antioxidant that stabilizes Vitamin C, extending its efficacy and shelf life. Amplifies photoprotection when combined with Vitamin C by up to 8x.</div>
+        </div>
+        <div class="ing-card">
+          <div class="ing-pct">—</div>
+          <div class="ing-name">Panthenol (Pro-Vitamin B5)</div>
+          <div class="ing-desc">Deeply moisturizing and soothing. Helps repair the skin barrier, reduces redness, and keeps skin soft and calm — especially important when using active ingredients.</div>
+        </div>
+        <div class="ing-card" style="background: #F9FAFB; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.5rem;">
+          <div style="font-size:0.8rem; color:var(--muted); text-align:center;">Full INCI Ingredients List</div>
+          <button style="background:var(--light-teal); color:var(--teal); border:1px solid var(--teal); padding:0.4rem 1rem; border-radius:6px; font-size:0.8rem; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500;">View Full List ↓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW TO USE -->
+    <div class="tab-content" id="tab-howtouse">
+      <div style="max-width:600px;">
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:1.25rem;">Best used in your <strong>morning routine</strong> before moisturizer and SPF. Can also be used at night.</p>
+        <div class="steps-list">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text"><strong>Cleanse</strong><span>Wash face with a gentle cleanser and pat dry completely.</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text"><strong>Apply toner (optional)</strong><span>If using a hydrating toner, apply first and let it absorb.</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text"><strong>Apply serum</strong><span>Dispense 3–4 drops onto fingertips. Gently pat onto face and neck — do not rub.</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-text"><strong>Let it absorb</strong><span>Wait 60 seconds for the serum to fully absorb before moving to the next step.</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-text"><strong>Moisturize</strong><span>Follow with your regular moisturizer to seal in the actives.</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">6</div>
+            <div class="step-text"><strong>SPF (AM only)</strong><span>Always finish your morning routine with SPF 30 or higher. Vitamin C + SPF = maximum protection.</span></div>
+          </div>
+        </div>
+        <div style="background:#FEF9E7; border:1px solid #F59E0B; border-radius:8px; padding:0.875rem 1rem; margin-top:1.25rem; font-size:0.825rem; color:#78350F; line-height:1.5;">
+          ⚠️ <strong>First-time use:</strong> Patch test on the inside of your wrist for 24 hours before applying to face. If you're new to Vitamin C, start with every other day before building to daily use.
+        </div>
+      </div>
+    </div>
+
+    <!-- FREE OF -->
+    <div class="tab-content" id="tab-freeof">
+      <p style="font-size:0.9rem; color:var(--muted); margin-bottom:1rem;">DaMembrane products are formulated without ingredients that have no place in effective skincare.</p>
+      <div class="free-of-grid">
+        <div class="free-item"><span class="free-check">✓</span> Paraben-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Sulfate-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Mineral Oil-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Alcohol-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Fragrance-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Cruelty-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Non-Comedogenic</div>
+        <div class="free-item"><span class="free-check">✓</span> Phthalate-Free</div>
+        <div class="free-item"><span class="free-check">✓</span> Dye-Free</div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="tab-content" id="tab-faq">
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q">Can I use this serum with Retinol? <span>▾</span></div>
+          <div class="faq-a">Yes, but use them at different times. Apply this Vitamin C serum in the morning and Retinol at night. This prevents over-exfoliation and maximizes the benefits of both ingredients. If you experience any irritation, reduce frequency.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How long before I see results? <span>▾</span></div>
+          <div class="faq-a">Most users see a visible improvement in brightness and skin tone within 4–6 weeks of daily use. Dark spots and hyperpigmentation typically require 8–12 weeks for significant reduction. Results vary by skin type and concern severity.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Is this safe for sensitive skin? <span>▾</span></div>
+          <div class="faq-a">This formula is dermatologist-tested and suitable for sensitive skin. We recommend a patch test before first use. If you have extremely reactive skin, start by using the serum every other day and gradually build up to daily use.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Can I use this during pregnancy? <span>▾</span></div>
+          <div class="faq-a">Vitamin C and Niacinamide are generally considered safe during pregnancy, but we always recommend consulting your dermatologist or OB/GYN before introducing new skincare actives during pregnancy or breastfeeding.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What is the shelf life of this product? <span>▾</span></div>
+          <div class="faq-a">This product has a 24-month shelf life from manufacture date. Once opened, use within 12 months (PAO: 12M). Store in a cool, dry place away from direct sunlight. Vitamin C may slightly oxidize over time — if it turns significantly orange or brown, it's time to replace it.</div>
+        </div>
+      </div>
+      <div style="margin-top:1rem; padding:0.875rem 1rem; background:var(--light-teal); border-radius:8px; font-size:0.825rem; color:var(--teal);">
+        💬 Have more questions? <strong>Chat with our skincare experts</strong> — available Mon–Sat, 10AM–7PM IST.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEWS -->
+<div class="reviews-section">
+  <h2 class="section-title anno" data-label="Reviews Section">Customer Reviews</h2>
+  <div class="reviews-summary">
+    <div style="text-align:center; min-width:100px;">
+      <div class="big-rating">4.8</div>
+      <div style="color:#F59E0B; font-size:1.1rem; margin:0.25rem 0;">★★★★★</div>
+      <div style="font-size:0.75rem; color:var(--muted);">2,341 reviews</div>
+    </div>
+    <div style="flex:1;">
+      <div class="rating-bar-row"><span style="min-width:2rem;">5★</span><div class="bar-outer"><div class="bar-inner" style="width:82%"></div></div><span>82%</span></div>
+      <div class="rating-bar-row" style="margin-top:0.4rem;"><span style="min-width:2rem;">4★</span><div class="bar-outer"><div class="bar-inner" style="width:11%; background:#94A3B8;"></div></div><span>11%</span></div>
+      <div class="rating-bar-row" style="margin-top:0.4rem;"><span style="min-width:2rem;">3★</span><div class="bar-outer"><div class="bar-inner" style="width:5%; background:#94A3B8;"></div></div><span>5%</span></div>
+      <div class="rating-bar-row" style="margin-top:0.4rem;"><span style="min-width:2rem;">2★</span><div class="bar-outer"><div class="bar-inner" style="width:1%; background:#94A3B8;"></div></div><span>1%</span></div>
+      <div class="rating-bar-row" style="margin-top:0.4rem;"><span style="min-width:2rem;">1★</span><div class="bar-outer"><div class="bar-inner" style="width:1%; background:#94A3B8;"></div></div><span>1%</span></div>
+    </div>
+    <div style="display:flex; gap:0.75rem; flex-direction:column; min-width:160px;">
+      <div style="font-size:0.8rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Top mentions</div>
+      <span class="ing-tag" style="text-align:center;">Visible results ✓</span>
+      <span class="ing-tag" style="text-align:center;">Non-sticky texture ✓</span>
+      <span class="ing-tag" style="text-align:center;">Fast absorption ✓</span>
+    </div>
+  </div>
+  <div class="reviews-grid">
+    <div class="review-card">
+      <div class="review-header"><span class="reviewer">Priya S.</span><span class="review-stars">★★★★★</span></div>
+      <span class="review-tag">Dark Spots · Oily Skin</span>
+      <p class="review-text" style="margin-top:0.5rem;">Been using this for 6 weeks and the difference is actually visible! My old dark spots from a breakout 2 months ago have faded significantly. The serum absorbs really quickly without any stickiness — perfect under sunscreen.</p>
+      <div class="review-verified">✓ Verified Purchase · 3 weeks ago</div>
+    </div>
+    <div class="review-card">
+      <div class="review-header"><span class="reviewer">Rithika M.</span><span class="review-stars">★★★★★</span></div>
+      <span class="review-tag">Dull Skin · Combination</span>
+      <p class="review-text" style="margin-top:0.5rem;">I've tried BeMinimalist and Deconstruct's Vit C serums and this one is honestly comparable in results but at a better price. My skin looks noticeably brighter in the morning. The Niacinamide combo really helps with my pores too.</p>
+      <div class="review-verified">✓ Verified Purchase · 1 month ago</div>
+    </div>
+  </div>
+</div>
+
+<!-- RELATED PRODUCTS -->
+<div class="related-section">
+  <h2 class="section-title anno" data-label="Complete Your Routine / Related Products">Complete Your Routine</h2>
+  <div class="related-grid">
+    <div class="product-card">
+      <div class="product-card-img">🌊</div>
+      <div class="product-card-info">
+        <div class="product-card-name">Moisturizing Cleanser</div>
+        <div class="product-card-concern">Gentle · Hydrating · pH-balanced</div>
+        <div class="product-card-price">₹349</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-card-img">🌿</div>
+      <div class="product-card-info">
+        <div class="product-card-name">Hydrating Face Toner</div>
+        <div class="product-card-concern">Preps skin · Boosts serum absorption</div>
+        <div class="product-card-price">₹299</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-card-img">👁️</div>
+      <div class="product-card-info">
+        <div class="product-card-name">Under Eye Gel</div>
+        <div class="product-card-concern">Dark circles · Puffiness · Peptides</div>
+        <div class="product-card-price">₹449</div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-card-img">☀️</div>
+      <div class="product-card-info">
+        <div class="product-card-name">SPF 50 Sunscreen PA++++</div>
+        <div class="product-card-concern">Broad spectrum · Lightweight · Non-white cast</div>
+        <div class="product-card-price">₹549</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">DaMembrane</div>
+      <p class="footer-tagline">Science-backed skincare. No hype. No shortcuts. Just ingredients that work — formulated transparently for every skin type.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <a href="#">All Products</a>
+      <a href="#">Serums</a>
+      <a href="#">Sunscreen</a>
+      <a href="#">Eye Care</a>
+      <a href="#">Bundles</a>
+    </div>
+    <div class="footer-col">
+      <h4>Learn</h4>
+      <a href="#">Skincare Blog</a>
+      <a href="#">Ingredient Guide</a>
+      <a href="#">Build a Routine</a>
+      <a href="#">Haircare Tips</a>
+    </div>
+    <div class="footer-col">
+      <h4>Help</h4>
+      <a href="#">Track Order</a>
+      <a href="#">Returns</a>
+      <a href="#">Contact Us</a>
+      <a href="#">Skin Quiz</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2024 DaMembrane · All rights reserved · <a href="#" style="color:#A9CCE3; text-decoration:none;">Privacy Policy</a> · <a href="#" style="color:#A9CCE3; text-decoration:none;">Terms of Use</a>
+  </div>
+</footer>
+
+<script>
+function switchTab(el, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>
